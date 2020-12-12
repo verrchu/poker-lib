@@ -12,6 +12,14 @@ impl Card {
     pub fn new(rank: Rank, suit: Suit) -> Self {
         Card(rank, suit)
     }
+
+    pub fn rank(&self) -> Rank {
+        self.0
+    }
+
+    pub fn suit(&self) -> Suit {
+        self.1
+    }
 }
 
 #[cfg(test)]
@@ -26,5 +34,15 @@ mod tests {
             Card::new(Rank::Two, Suit::Diamonds),
             Card(Rank::Two, Suit::Diamonds)
         );
+    }
+
+    #[test]
+    fn test_get_rank() {
+        assert_eq!(Card::new(Rank::Two, Suit::Diamonds).rank(), Rank::Two);
+    }
+
+    #[test]
+    fn test_get_suit() {
+        assert_eq!(Card::new(Rank::Two, Suit::Diamonds).suit(), Suit::Diamonds);
     }
 }
