@@ -17,6 +17,26 @@ pub enum Rank {
     Ace,
 }
 
+impl Rank {
+    pub fn list() -> Vec<Self> {
+        vec![
+            Self::Two,
+            Self::Three,
+            Self::Four,
+            Self::Five,
+            Self::Six,
+            Self::Seven,
+            Self::Eight,
+            Self::Nine,
+            Self::Ten,
+            Self::Jack,
+            Self::Queen,
+            Self::King,
+            Self::Ace,
+        ]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use ::claim::*;
@@ -268,5 +288,27 @@ mod tests {
         assert_gt!(lhs, Rank::Queen);
         assert_gt!(lhs, Rank::King);
         assert_eq!(lhs, Rank::Ace);
+    }
+
+    #[test]
+    fn test_list() {
+        assert_eq!(
+            Rank::list(),
+            vec![
+                Rank::Two,
+                Rank::Three,
+                Rank::Four,
+                Rank::Five,
+                Rank::Six,
+                Rank::Seven,
+                Rank::Eight,
+                Rank::Nine,
+                Rank::Ten,
+                Rank::Jack,
+                Rank::Queen,
+                Rank::King,
+                Rank::Ace,
+            ]
+        );
     }
 }
