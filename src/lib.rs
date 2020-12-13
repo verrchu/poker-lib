@@ -9,6 +9,7 @@ pub use combination::Combination;
 mod game;
 pub use game::Board;
 pub use game::Game;
+pub use game::Hand;
 pub use game::HandOf2;
 pub use game::HandOf4;
 pub use game::HandOf5;
