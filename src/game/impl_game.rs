@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::convert::TryInto;
 
 use ::itertools::Itertools;
@@ -7,6 +8,7 @@ use crate::card::Card;
 use crate::combination::Combination;
 use crate::game::Board;
 use crate::game::Game;
+use crate::game::Hand;
 use crate::game::HandOf2;
 use crate::game::HandOf4;
 use crate::game::Variant;
@@ -16,26 +18,16 @@ impl Game {
         match game {
             Self::TexasHoldem(board, hands) => hands
                 .iter()
-                .map(|hand| {
-                    (
-                        hand.0.to_vec(),
-                        Self::texas_holdem_combination(board, *hand),
-                    )
-                })
+                .map(|hand| (hand.cards(), Self::texas_holdem_combination(board, *hand)))
                 .collect::<Vec<_>>(),
             Self::OmahaHoldem(board, hands) => hands
                 .iter()
-                .map(|hand| {
-                    (
-                        hand.0.to_vec(),
-                        Self::omaha_holdem_combination(board, *hand),
-                    )
-                })
+                .map(|hand| (hand.cards(), Self::omaha_holdem_combination(board, *hand)))
                 .collect::<Vec<_>>(),
             Self::FiveCardDraw(hands) => hands
                 .iter()
-                .map(|hand| (hand, Variant(hand.0)))
-                .map(|(hand, variant)| (hand.0.to_vec(), Combination::from_variant(variant)))
+                .map(|hand| (hand, Variant::try_from(hand.cards()).unwrap()))
+                .map(|(hand, variant)| (hand.cards(), Combination::from_variant(variant)))
                 .collect::<Vec<_>>(),
         }
     }
@@ -70,9 +62,9 @@ impl Game {
 
     fn texas_holdem_combination(board: Board, hand: HandOf2) -> Combination {
         board
-            .0
+            .cards()
             .iter()
-            .chain(hand.0.iter())
+            .chain(hand.cards().iter())
             .copied()
             .combinations(5)
             .map(|comb| Variant(comb.try_into().unwrap()))
@@ -83,12 +75,10 @@ impl Game {
     }
 
     fn omaha_holdem_combination(board: Board, hand: HandOf4) -> Combination {
-        let hand_combinations = hand.0.iter().combinations(2);
-        let board_combinations = board.0.iter().combinations(3);
-
-        hand_combinations
-            .into_iter()
-            .cartesian_product(board_combinations.into_iter())
+        hand.cards()
+            .iter()
+            .combinations(2)
+            .cartesian_product(board.cards().iter().combinations(3))
             .map(|(h, b)| {
                 h.into_iter()
                     .chain(b.into_iter())
@@ -120,7 +110,7 @@ mod tests {
     #[test]
     fn test_texas_holdem_ordering() {
         let game = Game::TexasHoldem(
-            Board([
+            Board::new([
                 Card(Rank::Queen, Suit::Spades),
                 Card(Rank::King, Suit::Diamonds),
                 Card(Rank::King, Suit::Spades),
@@ -128,16 +118,16 @@ mod tests {
                 Card(Rank::Jack, Suit::Diamonds),
             ]),
             vec![
-                HandOf2([Card(Rank::King, Suit::Hearts), Card(Rank::Two, Suit::Clubs)]),
-                HandOf2([
+                HandOf2::new([Card(Rank::King, Suit::Hearts), Card(Rank::Two, Suit::Clubs)]),
+                HandOf2::new([
                     Card(Rank::King, Suit::Clubs),
                     Card(Rank::Seven, Suit::Diamonds),
                 ]),
-                HandOf2([
+                HandOf2::new([
                     Card(Rank::Ace, Suit::Diamonds),
                     Card(Rank::Ten, Suit::Hearts),
                 ]),
-                HandOf2([
+                HandOf2::new([
                     Card(Rank::Six, Suit::Diamonds),
                     Card(Rank::Six, Suit::Hearts),
                 ]),
@@ -192,7 +182,7 @@ mod tests {
     #[test]
     fn test_omaha_holdem_ordering() {
         let game = Game::OmahaHoldem(
-            Board([
+            Board::new([
                 Card(Rank::Queen, Suit::Spades),
                 Card(Rank::King, Suit::Diamonds),
                 Card(Rank::King, Suit::Spades),
@@ -200,19 +190,19 @@ mod tests {
                 Card(Rank::Jack, Suit::Diamonds),
             ]),
             vec![
-                HandOf4([
+                HandOf4::new([
                     Card(Rank::King, Suit::Hearts),
                     Card(Rank::Two, Suit::Clubs),
                     Card(Rank::Eight, Suit::Clubs),
                     Card(Rank::Two, Suit::Diamonds),
                 ]),
-                HandOf4([
+                HandOf4::new([
                     Card(Rank::King, Suit::Clubs),
                     Card(Rank::Seven, Suit::Diamonds),
                     Card(Rank::Seven, Suit::Hearts),
                     Card(Rank::Seven, Suit::Spades),
                 ]),
-                HandOf4([
+                HandOf4::new([
                     Card(Rank::Ace, Suit::Diamonds),
                     Card(Rank::Ten, Suit::Hearts),
                     Card(Rank::Ace, Suit::Clubs),
@@ -267,21 +257,21 @@ mod tests {
     #[test]
     fn test_five_card_draw_ordering() {
         let game = Game::FiveCardDraw(vec![
-            HandOf5([
+            HandOf5::new([
                 Card(Rank::King, Suit::Hearts),
                 Card(Rank::Two, Suit::Clubs),
                 Card(Rank::Eight, Suit::Clubs),
                 Card(Rank::Two, Suit::Diamonds),
                 Card(Rank::Two, Suit::Hearts),
             ]),
-            HandOf5([
+            HandOf5::new([
                 Card(Rank::King, Suit::Clubs),
                 Card(Rank::Seven, Suit::Diamonds),
                 Card(Rank::Seven, Suit::Hearts),
                 Card(Rank::Seven, Suit::Spades),
                 Card(Rank::Seven, Suit::Clubs),
             ]),
-            HandOf5([
+            HandOf5::new([
                 Card(Rank::Ace, Suit::Diamonds),
                 Card(Rank::Ten, Suit::Hearts),
                 Card(Rank::Ace, Suit::Clubs),
@@ -484,7 +474,7 @@ mod tests {
 
     #[test]
     fn test_texas_holdem_combination() {
-        let board = Board([
+        let board = Board::new([
             Card(Rank::Ace, Suit::Diamonds),
             Card(Rank::Ten, Suit::Hearts),
             Card(Rank::Nine, Suit::Hearts),
@@ -492,7 +482,7 @@ mod tests {
             Card(Rank::Seven, Suit::Hearts),
         ]);
 
-        let hand = HandOf2([
+        let hand = HandOf2::new([
             Card(Rank::Four, Suit::Hearts),
             Card(Rank::Jack, Suit::Diamonds),
         ]);
@@ -505,7 +495,7 @@ mod tests {
 
     #[test]
     fn test_omaha_holdem_combination() {
-        let board = Board([
+        let board = Board::new([
             Card(Rank::Ace, Suit::Diamonds),
             Card(Rank::Ten, Suit::Hearts),
             Card(Rank::Nine, Suit::Hearts),
@@ -513,7 +503,7 @@ mod tests {
             Card(Rank::Seven, Suit::Hearts),
         ]);
 
-        let hand = HandOf4([
+        let hand = HandOf4::new([
             Card(Rank::Four, Suit::Hearts),
             Card(Rank::Jack, Suit::Diamonds),
             Card(Rank::Queen, Suit::Clubs),

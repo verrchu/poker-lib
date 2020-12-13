@@ -37,7 +37,6 @@ impl Ord for Card {
 
 #[cfg(test)]
 mod tests {
-    use ::claim::*;
     use ::itertools::Itertools;
 
     use std::cmp::Ordering;
