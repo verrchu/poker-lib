@@ -5,6 +5,7 @@ pub use card::Suit;
 
 mod combination;
 pub use combination::Combination;
+pub use combination::Variant;
 
 mod game;
 pub use game::Board;

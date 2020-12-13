@@ -6,12 +6,12 @@ use ::itertools::Itertools;
 
 use crate::card::Card;
 use crate::combination::Combination;
+use crate::combination::Variant;
 use crate::game::Board;
 use crate::game::Game;
 use crate::game::Hand;
 use crate::game::HandOf2;
 use crate::game::HandOf4;
-use crate::game::Variant;
 
 impl Game {
     pub fn rank_hands(game: Self) -> Vec<(Vec<Card>, Combination, Variant)> {
@@ -101,12 +101,12 @@ mod tests {
     use crate::card::Rank;
     use crate::card::Suit;
     use crate::combination::Combination;
+    use crate::combination::Variant;
     use crate::game::Board;
     use crate::game::Game;
     use crate::game::HandOf2;
     use crate::game::HandOf4;
     use crate::game::HandOf5;
-    use crate::game::Variant;
 
     #[test]
     fn test_texas_holdem_ordering() {

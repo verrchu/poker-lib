@@ -5,7 +5,7 @@ use ::itertools::Itertools;
 use crate::card::Card;
 use crate::card::Rank;
 use crate::combination::Combination;
-use crate::game::Variant;
+use crate::combination::Variant;
 
 impl Combination {
     pub(crate) fn from_variant(variant: Variant) -> Self {
@@ -239,7 +239,7 @@ mod tests {
     use crate::card::Rank;
     use crate::card::Suit;
     use crate::combination::Combination;
-    use crate::game::Variant;
+    use crate::combination::Variant;
 
     #[test]
     fn test_high_card_from_variant() {
