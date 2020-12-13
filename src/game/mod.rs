@@ -17,7 +17,13 @@ pub enum Game {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Variant(pub [Card; 5]);
+pub struct Variant(pub(crate) [Card; 5]);
+
+impl Variant {
+    pub fn cards(&self) -> Vec<Card> {
+        self.0.to_vec()
+    }
+}
 
 impl TryFrom<Vec<Card>> for Variant {
     type Error = std::io::Error;

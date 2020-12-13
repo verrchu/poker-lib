@@ -14,20 +14,22 @@ use crate::game::HandOf4;
 use crate::game::Variant;
 
 impl Game {
-    pub fn rank_hands(game: Self) -> Vec<(Vec<Card>, Combination)> {
+    pub fn rank_hands(game: Self) -> Vec<(Vec<Card>, Combination, Variant)> {
         match game {
             Self::TexasHoldem(board, hands) => hands
-                .iter()
-                .map(|hand| (hand.cards(), Self::texas_holdem_combination(board, *hand)))
+                .into_iter()
+                .map(|hand| (hand.cards(), Self::texas_holdem_combination(board, hand)))
+                .map(|(hand, (combination, variant))| (hand, combination, variant))
                 .collect::<Vec<_>>(),
             Self::OmahaHoldem(board, hands) => hands
-                .iter()
-                .map(|hand| (hand.cards(), Self::omaha_holdem_combination(board, *hand)))
+                .into_iter()
+                .map(|hand| (hand.cards(), Self::omaha_holdem_combination(board, hand)))
+                .map(|(hand, (combination, variant))| (hand, combination, variant))
                 .collect::<Vec<_>>(),
             Self::FiveCardDraw(hands) => hands
                 .iter()
                 .map(|hand| (hand, Variant::try_from(hand.cards()).unwrap()))
-                .map(|(hand, variant)| (hand.cards(), Combination::from_variant(variant)))
+                .map(|(hand, variant)| (hand.cards(), Combination::from_variant(variant), variant))
                 .collect::<Vec<_>>(),
         }
     }
@@ -60,7 +62,7 @@ impl Game {
             .collect()
     }
 
-    fn texas_holdem_combination(board: Board, hand: HandOf2) -> Combination {
+    fn texas_holdem_combination(board: Board, hand: HandOf2) -> (Combination, Variant) {
         board
             .cards()
             .iter()
@@ -68,13 +70,12 @@ impl Game {
             .copied()
             .combinations(5)
             .map(|comb| Variant(comb.try_into().unwrap()))
-            .map(Combination::from_variant)
-            .sorted()
-            .max()
+            .map(|variant| (Combination::from_variant(variant), variant))
+            .max_by(|(comb_a, _), (comb_b, _)| comb_a.cmp(comb_b))
             .unwrap()
     }
 
-    fn omaha_holdem_combination(board: Board, hand: HandOf4) -> Combination {
+    fn omaha_holdem_combination(board: Board, hand: HandOf4) -> (Combination, Variant) {
         hand.cards()
             .iter()
             .combinations(2)
@@ -86,9 +87,8 @@ impl Game {
                     .collect::<Vec<_>>()
             })
             .map(|cards| Variant(cards.try_into().unwrap()))
-            .map(Combination::from_variant)
-            .sorted()
-            .max()
+            .map(|variant| (Combination::from_variant(variant), variant))
+            .max_by(|(comb_a, _), (comb_b, _)| comb_a.cmp(comb_b))
             .unwrap()
     }
 }
@@ -106,6 +106,7 @@ mod tests {
     use crate::game::HandOf2;
     use crate::game::HandOf4;
     use crate::game::HandOf5;
+    use crate::game::Variant;
 
     #[test]
     fn test_texas_holdem_ordering() {
@@ -137,7 +138,10 @@ mod tests {
         assert_eq!(
             Game::rank_hands(game)
                 .into_iter()
-                .sorted_by(|(_, comb_a), (_, comb_b)| comb_a.cmp(comb_b))
+                .sorted_by(
+                    |(_hand_a, comb_a, _variant_a), (_hand_b, comb_b, _variant_b)| comb_a
+                        .cmp(comb_b)
+                )
                 .collect::<Vec<_>>(),
             vec![
                 (
@@ -149,21 +153,42 @@ mod tests {
                         low: Rank::Six,
                         high: Rank::King,
                         kicker: Rank::Queen
-                    }
+                    },
+                    Variant([
+                        Card(Rank::Queen, Suit::Spades),
+                        Card(Rank::King, Suit::Diamonds),
+                        Card(Rank::King, Suit::Spades),
+                        Card(Rank::Six, Suit::Diamonds),
+                        Card(Rank::Six, Suit::Hearts)
+                    ])
                 ),
                 (
                     vec![Card(Rank::King, Suit::Hearts), Card(Rank::Two, Suit::Clubs),],
                     Combination::ThreeOfAKind {
                         rank: Rank::King,
                         kicker: Rank::Queen
-                    }
+                    },
+                    Variant([
+                        Card(Rank::Queen, Suit::Spades),
+                        Card(Rank::King, Suit::Diamonds),
+                        Card(Rank::King, Suit::Spades),
+                        Card(Rank::King, Suit::Hearts),
+                        Card(Rank::Two, Suit::Clubs)
+                    ])
                 ),
                 (
                     vec![
                         Card(Rank::Ace, Suit::Diamonds),
                         Card(Rank::Ten, Suit::Hearts),
                     ],
-                    Combination::Straight { rank: Rank::Ten }
+                    Combination::Straight { rank: Rank::Ten },
+                    Variant([
+                        Card(Rank::Queen, Suit::Spades),
+                        Card(Rank::King, Suit::Spades),
+                        Card(Rank::Jack, Suit::Diamonds),
+                        Card(Rank::Ace, Suit::Diamonds),
+                        Card(Rank::Ten, Suit::Hearts)
+                    ])
                 ),
                 (
                     vec![
@@ -173,7 +198,14 @@ mod tests {
                     Combination::FullHouse {
                         two: Rank::Seven,
                         three: Rank::King
-                    }
+                    },
+                    Variant([
+                        Card(Rank::King, Suit::Diamonds),
+                        Card(Rank::King, Suit::Spades),
+                        Card(Rank::Seven, Suit::Clubs),
+                        Card(Rank::King, Suit::Clubs),
+                        Card(Rank::Seven, Suit::Diamonds)
+                    ])
                 )
             ]
         );
@@ -214,7 +246,10 @@ mod tests {
         assert_eq!(
             Game::rank_hands(game)
                 .into_iter()
-                .sorted_by(|(_, comb_a), (_, comb_b)| comb_a.cmp(comb_b))
+                .sorted_by(
+                    |(_hand_a, comb_a, _variant_a), (_hand_b, comb_b, _variant_b)| comb_a
+                        .cmp(comb_b)
+                )
                 .collect::<Vec<_>>(),
             vec![
                 (
@@ -227,7 +262,14 @@ mod tests {
                     Combination::ThreeOfAKind {
                         rank: Rank::King,
                         kicker: Rank::Queen
-                    }
+                    },
+                    Variant([
+                        Card(Rank::King, Suit::Hearts),
+                        Card(Rank::Two, Suit::Diamonds),
+                        Card(Rank::Queen, Suit::Spades),
+                        Card(Rank::King, Suit::Diamonds),
+                        Card(Rank::King, Suit::Spades)
+                    ])
                 ),
                 (
                     vec![
@@ -236,7 +278,14 @@ mod tests {
                         Card(Rank::Ace, Suit::Clubs),
                         Card(Rank::Ten, Suit::Clubs),
                     ],
-                    Combination::Straight { rank: Rank::Ten }
+                    Combination::Straight { rank: Rank::Ten },
+                    Variant([
+                        Card(Rank::Ace, Suit::Clubs),
+                        Card(Rank::Ten, Suit::Clubs),
+                        Card(Rank::Queen, Suit::Spades),
+                        Card(Rank::King, Suit::Spades),
+                        Card(Rank::Jack, Suit::Diamonds)
+                    ])
                 ),
                 (
                     vec![
@@ -248,7 +297,14 @@ mod tests {
                     Combination::FullHouse {
                         two: Rank::Seven,
                         three: Rank::King
-                    }
+                    },
+                    Variant([
+                        Card(Rank::King, Suit::Clubs),
+                        Card(Rank::Seven, Suit::Spades),
+                        Card(Rank::King, Suit::Diamonds),
+                        Card(Rank::King, Suit::Spades),
+                        Card(Rank::Seven, Suit::Clubs)
+                    ])
                 )
             ]
         );
@@ -283,7 +339,10 @@ mod tests {
         assert_eq!(
             Game::rank_hands(game)
                 .into_iter()
-                .sorted_by(|(_, comb_a), (_, comb_b)| comb_a.cmp(comb_b))
+                .sorted_by(
+                    |(_hand_a, comb_a, _variant_a), (_hand_b, comb_b, _variant_b)| comb_a
+                        .cmp(comb_b)
+                )
                 .collect::<Vec<_>>(),
             vec![
                 (
@@ -297,7 +356,14 @@ mod tests {
                     Combination::ThreeOfAKind {
                         rank: Rank::Two,
                         kicker: Rank::King
-                    }
+                    },
+                    Variant([
+                        Card(Rank::King, Suit::Hearts),
+                        Card(Rank::Two, Suit::Clubs),
+                        Card(Rank::Eight, Suit::Clubs),
+                        Card(Rank::Two, Suit::Diamonds),
+                        Card(Rank::Two, Suit::Hearts)
+                    ])
                 ),
                 (
                     vec![
@@ -310,7 +376,14 @@ mod tests {
                     Combination::FullHouse {
                         two: Rank::Ace,
                         three: Rank::Ten
-                    }
+                    },
+                    Variant([
+                        Card(Rank::Ace, Suit::Diamonds),
+                        Card(Rank::Ten, Suit::Hearts),
+                        Card(Rank::Ace, Suit::Clubs),
+                        Card(Rank::Ten, Suit::Clubs),
+                        Card(Rank::Ten, Suit::Diamonds)
+                    ])
                 ),
                 (
                     vec![
@@ -323,7 +396,14 @@ mod tests {
                     Combination::FourOfAKind {
                         rank: Rank::Seven,
                         kicker: Rank::King
-                    }
+                    },
+                    Variant([
+                        Card(Rank::King, Suit::Clubs),
+                        Card(Rank::Seven, Suit::Diamonds),
+                        Card(Rank::Seven, Suit::Hearts),
+                        Card(Rank::Seven, Suit::Spades),
+                        Card(Rank::Seven, Suit::Clubs)
+                    ])
                 )
             ]
         );
@@ -489,7 +569,16 @@ mod tests {
 
         assert_eq!(
             Game::texas_holdem_combination(board, hand),
-            Combination::Flush { rank: Rank::Ten }
+            (
+                Combination::Flush { rank: Rank::Ten },
+                Variant([
+                    Card(Rank::Ten, Suit::Hearts),
+                    Card(Rank::Nine, Suit::Hearts),
+                    Card(Rank::Eight, Suit::Hearts),
+                    Card(Rank::Seven, Suit::Hearts),
+                    Card(Rank::Four, Suit::Hearts)
+                ])
+            )
         );
     }
 
@@ -512,7 +601,16 @@ mod tests {
 
         assert_eq!(
             Game::omaha_holdem_combination(board, hand),
-            Combination::Straight { rank: Rank::Eight }
+            (
+                Combination::Straight { rank: Rank::Eight },
+                Variant([
+                    Card(Rank::Jack, Suit::Diamonds),
+                    Card(Rank::Queen, Suit::Clubs),
+                    Card(Rank::Ten, Suit::Hearts),
+                    Card(Rank::Nine, Suit::Hearts),
+                    Card(Rank::Eight, Suit::Hearts)
+                ])
+            )
         );
     }
 }
